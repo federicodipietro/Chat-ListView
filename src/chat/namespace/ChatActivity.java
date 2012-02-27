@@ -14,6 +14,7 @@ import org.jivesoftware.smack.packet.Packet;
 import android.app.Activity;
 import android.os.Bundle;
 import android.text.Editable;
+import android.util.Log;
 
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -47,6 +48,34 @@ public class ChatActivity extends Activity {
         adapter.add("Chat");
         
         
+       
+        try{
+        	ConnectionConfiguration config = new ConnectionConfiguration("ppl.eln.uniroma2.it",5222);
+        	config.setSecurityMode(ConnectionConfiguration.SecurityMode.disabled);
+        	connection = new XMPPConnection(config);
+        	connection.connect();
+        	connection.login(getIntent().getExtras().getString("username").toString(),
+        						getIntent().getExtras().getString("password").toString());
+        	
+        	connection.addPacketListener(new PacketListener() {
+    			
+    			@Override
+    			public void processPacket(Packet pkt) {
+    				Message msg = (Message) pkt;
+    				String from = msg.getFrom();
+    				String body = msg.getBody();
+    				adapter.add(from+" : "+body+"\n");
+    				lv.setSelection(adapter.getCount()-1);
+    				Log.e("RIC",from+"  "+body);
+    			}
+    		}, new MessageTypeFilter(Message.Type.normal));
+        	
+        }catch (XMPPException e){
+        	e.printStackTrace();
+        	Toast.makeText(ChatActivity.this, "Nessuna connessione", Toast.LENGTH_SHORT);
+        }
+        
+      
         btnSend.setOnClickListener(new OnClickListener() {
 			
 			@Override
@@ -57,31 +86,13 @@ public class ChatActivity extends Activity {
 				//spedizione messaggio
 				Message msg = new Message();
 				//al posto di loreti inserire username del destinatario
-				msg.setTo(getIntent().getExtras().getString("destination").toString()+"@ppl.eln.uniroma2.it");
+				msg.setTo(getIntent().getExtras().getString("destination").toString());
+				msg.setBody(etext.getText().toString());
 				lv.setSelection(adapter.getCount()-1);
+				connection.sendPacket(msg);
+				Log.d("DEST",getIntent().getExtras().getString("destination").toString());
+				Log.d("MSG", msg.getBody().toString());
 			}
 		});
-        try{
-        	ConnectionConfiguration config = new ConnectionConfiguration("ppl.eln.uniroma2.it",5222);
-        	config.setSecurityMode(ConnectionConfiguration.SecurityMode.disabled);
-        	connection = new XMPPConnection(config);
-        	connection.connect();
-        	connection.login(getIntent().getExtras().getString("username").toString(),
-        						getIntent().getExtras().getString("password").toString());
-        }catch (XMPPException e){
-        	e.printStackTrace();
-        	Toast.makeText(ChatActivity.this, "Nessuna connessione", Toast.LENGTH_SHORT);
-        }
-        connection.addPacketListener(new PacketListener() {
-			
-			@Override
-			public void processPacket(Packet pkt) {
-				Message msg = (Message)pkt;
-				String from = msg.getFrom();
-				String body = msg.getBody();
-				((Editable) lv).append(from+" : "+body+"\n");
-				lv.setSelection(adapter.getCount()-1);
-			}
-		}, new MessageTypeFilter(Message.Type.normal));
     }
 }
